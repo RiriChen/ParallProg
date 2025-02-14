@@ -5,6 +5,7 @@
  *
  */
 #define _GNU_SOURCE
+#define BILLION 1000000000L  // For nanosecond conversion
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,95 +42,108 @@ pthread_mutex_t mutex;
 
 //The vector x and vector y need to be changes into PSOs
 
+ int optimize_using_pthreads(char *function, int dim, int swarm_size, 
+                             float xmin, float xmax, int num_iter, int num_threads)
+ {
+ 
+    struct timespec start, end;
+    double elapsed_time;
 
-int optimize_using_pthreads(char *function, int dim, int swarm_size, 
-        float xmin, float xmax, int num_iter, int num_threads)
-{
+    // Start timing
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
-    /* Initialize PSO */
-    swarm_t *swarm;
-    srand(time(NULL));
-    swarm = pso_init(function, dim, swarm_size, xmin, xmax);
+     /* Initialize PSO */
+     swarm_t *swarm;
+     srand(time(NULL));
+     swarm = pso_init(function, dim, swarm_size, xmin, xmax);
+ 
+     int i, j, iter, local_min_best_g;
+     float w, c1, c2,local_best_fitness;
+     
+     float curr_fitness;
+ 
+     w = 0.79;
+     c1 = 1.49;
+     c2 = 1.49;
+     iter = 0;
+     local_min_best_g = -1;
+     local_best_fitness=INFINITY;
+ 
+ 
+ 
+     pthread_t *thread_id = (pthread_t *) malloc (num_threads * sizeof(pthread_t)); /* Data structure to store the thread IDs */
+     pthread_attr_t attributes;      /* Thread attributes */
+     pthread_attr_init(&attributes); /* Initialize thread attributes to default values */
+     pthread_barrier_init(&barrier, NULL, num_threads);
+     pthread_mutex_init(&mutex, NULL);
+     particle_t *particle;
+ 
+  
+     int chunk_size = (int)floor((float) swarm->num_particles/(float) num_threads); /* Compute the chunk size */
+     
+     thread_data_t *thread_data = (thread_data_t *) malloc(sizeof(thread_data_t) * num_threads);	  
+     for (int i = 0; i < num_threads; i++) {
+         // i = 0 , 1 ,2 .. 
+         // off = 0, 12 ,24... 
+         thread_data[i].tid = i; 
+         thread_data[i].num_threads = num_threads;
+         thread_data[i].num_elements = swarm->num_particles; 
+         thread_data[i].swarm = swarm;
+         thread_data[i].w  = w; 
+         thread_data[i].c1 = c1;
+         thread_data[i].c2 = c2;
+         thread_data[i].xmin = xmin;
+         thread_data[i].xmax = xmax;
+         thread_data[i].function = function; 
+         thread_data[i].curr_fitness = curr_fitness;
+         thread_data[i].local_min_best_fit = local_best_fitness;
+         thread_data[i].local_min_best_g = local_min_best_g;
+         thread_data[i].offset = i * chunk_size; 
+         thread_data[i].chunk_size = chunk_size;
+     }
 
-    int iter, local_min_best_g;
-    float w, c1, c2,local_best_fitness;
+ 
+     while (iter < num_iter) {
+ 
+ 
+         //optimize threads till here 
+     /* Fork point: allocate memory on heap for required data structures and create worker threads */
+ 
+ 
+ 
+         for (int i = 0; i < num_threads; i++)
+             pthread_create(&thread_id[i], &attributes, optimize_swarm, (void *)&thread_data[i]);
+                         
+         for (int i = 0; i < num_threads; i++)
+             pthread_join(thread_id[i], NULL);
+ 
+ 
+ 
+         /* Identify best performing particle. HINT: You can inline this function when optimizing using pthreads. */
+         // g = pso_get_best_fitness(swarm);
+         // for (int i = 0; i < swarm->num_particles; i++) {
+         //     particle = &swarm->particle[i];
+         //     particle->g = g;
+         // }
+ 
+         iter++;
+     } /* End of iteration */
+     // Stop timing
+     clock_gettime(CLOCK_MONOTONIC, &end);
 
-    float curr_fitness;
+     // Compute elapsed time
+     elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / (double)BILLION;
 
-    w = 0.79;
-    c1 = 1.49;
-    c2 = 1.49;
-    iter = 0;
-    local_min_best_g = -1;
-    local_best_fitness=INFINITY;
-
-
-    pthread_t *thread_id = (pthread_t *) malloc (num_threads * sizeof(pthread_t)); /* Data structure to store the thread IDs */
-    pthread_attr_t attributes;      /* Thread attributes */
-    pthread_attr_init(&attributes); /* Initialize thread attributes to default values */
-    pthread_barrier_init(&barrier, NULL, num_threads);
-    pthread_mutex_init(&mutex, NULL);
-    particle_t *particle;
-
-
-    int chunk_size = (int)floor((float) swarm->num_particles/(float) num_threads); /* Compute the chunk size */
-
-    thread_data_t *thread_data = (thread_data_t *) malloc(sizeof(thread_data_t) * num_threads);	  
-    for (int i = 0; i < num_threads; i++) {
-        // i = 0 , 1 ,2 .. 
-        // off = 0, 12 ,24... 
-        thread_data[i].tid = i; 
-        thread_data[i].num_threads = num_threads;
-        thread_data[i].num_elements = swarm->num_particles; 
-        thread_data[i].swarm = swarm;
-        thread_data[i].w  = w; 
-        thread_data[i].c1 = c1;
-        thread_data[i].c2 = c2;
-        thread_data[i].xmin = xmin;
-        thread_data[i].xmax = xmax;
-        thread_data[i].function = function; 
-        thread_data[i].curr_fitness = curr_fitness;
-        thread_data[i].local_min_best_fit = local_best_fitness;
-        thread_data[i].local_min_best_g = local_min_best_g;
-        thread_data[i].offset = i * chunk_size; 
-        thread_data[i].chunk_size = chunk_size;
-    }
-
-    while (iter < num_iter) {
-
-
-        //optimize threads till here 
-        /* Fork point: allocate memory on heap for required data structures and create worker threads */
-
-
-        for (int i = 0; i < num_threads; i++)
-            pthread_create(&thread_id[i], &attributes, optimize_swarm, (void *)&thread_data[i]);
-
-        for (int i = 0; i < num_threads; i++)
-            pthread_join(thread_id[i], NULL);
-
-
-        /* Identify best performing particle. HINT: You can inline this function when optimizing using pthreads. */
-        // g = pso_get_best_fitness(swarm);
-        // for (int i = 0; i < swarm->num_particles; i++) {
-        //     particle = &swarm->particle[i];
-        //     particle->g = g;
-        // }
-
-        iter++;
-    } /* End of iteration */
-
-    pthread_barrier_destroy(&barrier);
-    pthread_mutex_destroy(&mutex);
-    free((void *)thread_data);
-
-
-    printf("Our particle Solution:\n");
-    pso_print_particle(&swarm->particle[g]);
-
-    return g;
-}
-
+     pthread_barrier_destroy(&barrier);
+     pthread_mutex_destroy(&mutex);
+     free((void *)thread_data);
+     
+     printf("Execution time: %.6f seconds\n", elapsed_time);
+     printf("Our particle Solution:\n");
+     pso_print_particle(&swarm->particle[g]);
+ 
+     return g;
+ }
 
 void *optimize_swarm(void *args)
 {
