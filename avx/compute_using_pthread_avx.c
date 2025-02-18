@@ -15,6 +15,7 @@
  * Result must be placed in pthread_avx_solution_x. */
 void compute_using_pthread_avx(const matrix_t A, matrix_t pthread_avx_solution_x, const matrix_t B, int max_iter, int num_threads)
 {
+
 }
 
 
