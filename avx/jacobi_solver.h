@@ -24,4 +24,3 @@ void print_matrix(const matrix_t);
 float get_random_number(int, int);
 
 #endif /* _JACOBI_SOLVER_H_ */
-

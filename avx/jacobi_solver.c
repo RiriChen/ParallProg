@@ -4,8 +4,8 @@
  * Author: Naga Kandasamy
  * Date modified: February 13, 2025
  *
- * Student name(s): FIXME
- * Date modified: FIXME
+ * Student name(s): Ricky Chen, Keith Trungcao
+ * Date modified: 2/18/25
  *
  * Build as follosw: make clean && make
 */
@@ -60,26 +60,40 @@ int main(int argc, char **argv)
 #endif
 
     int max_iter = 100000; /* Maximum number of iterations to run */
+    clock_t start, end;
+    double time_spent;
     /* Compute Jacobi solution using reference code */
     fprintf(stderr, "**************\n");
     fprintf(stderr, "Generating solution using reference\n");
+    start = clock();
     compute_gold(A, reference_x, B, max_iter);
+    end = clock();
+    time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     display_jacobi_solution(A, reference_x, B); /* Display statistics */
-    fprintf(stderr, "**************\n");
+    fprintf(stderr, "Execution time: %f seconds\n", time_spent);
+    fprintf(stderr, "**************\n\n");
 
     /* Compute Jacobi solution using AVX. Return solution in avx_solution_x. */
     fprintf(stderr, "**************\n");
     fprintf(stderr, "Generating solution using AVX\n");
+    start = clock();
     compute_using_avx(A, avx_solution_x, B, max_iter);
+    end = clock();
+    time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     display_jacobi_solution(A, avx_solution_x, B); /* Display statistics */
-    fprintf(stderr, "**************\n");
+    fprintf(stderr, "Execution time: %f seconds\n", time_spent);
+    fprintf(stderr, "**************\n\n");
 
     /* Compute Jacobi solution using pthreads. Return solution in pthread_solution_x. */
     fprintf(stderr, "**************\n");
     fprintf(stderr, "Generating solution using pthreads + AVX\n");
+    start = clock();
     compute_using_pthread_avx(A, pthread_avx_solution_x, B, max_iter, num_threads);
+    end = clock();
+    time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     display_jacobi_solution(A, pthread_avx_solution_x, B); /* Display statistics */
-    fprintf(stderr, "**************\n");
+    fprintf(stderr, "Execution time: %f seconds\n", time_spent);
+    fprintf(stderr, "**************\n\n");
 
     free(A.elements);
     free(B.elements);
@@ -190,6 +204,3 @@ matrix_t create_diagonally_dominant_matrix(int num_rows, int num_columns)
 
     return M;
 }
-
-
-
