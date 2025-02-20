@@ -35,6 +35,10 @@ void *jacobi_pthread_avx_worker(void *arg)
     int start = thread_data->tid * thread_data->chunk_size;
     int end = start + thread_data->chunk_size;
 
+    if (start + thread_data->chunk_size > num_rows) {
+        end = num_rows;
+    }
+
     int i;
 
     float *src = thread_data->x;
