@@ -74,10 +74,12 @@ void compute_using_avx(const matrix_t A, matrix_t avx_solution_x, const matrix_t
         dest = temp;
     }
 
+    /*
     if (num_iter < max_iter)
         fprintf(stderr, "\nConvergence achieved after %d iterations\n", num_iter);
     else
         fprintf(stderr, "\nMaximum allowed iterations reached\n");
+    */
 
     free(new_x.elements);
 }

@@ -57,10 +57,12 @@ void compute_gold(const matrix_t A, matrix_t x, const matrix_t B, int max_iter)
         dest = temp;
     }
 
+    /*
     if (num_iter < max_iter)
         fprintf(stderr, "\nConvergence achieved after %d iterations\n", num_iter);
     else
         fprintf(stderr, "\nMaximum allowed iterations reached\n");
+    */
 
     free(new_x.elements);
 }

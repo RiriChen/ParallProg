@@ -130,10 +130,12 @@ void compute_using_pthread_avx(const matrix_t A, matrix_t pthread_avx_solution_x
         pthread_join(thread_id[i], NULL);
     }
 
+    /*
     if (num_iter < max_iter)
         fprintf(stderr, "\nConvergence achieved after %d iterations\n", num_iter);
     else
         fprintf(stderr, "\nMaximum allowed iterations reached\n");
+    */
 
     free((void *)thread_data);
     free((void *)thread_id);
