@@ -57,9 +57,19 @@ void compute_using_avx(const matrix_t A, matrix_t avx_solution_x, const matrix_t
 
         /* Check for convergence and update the unknowns. */
         ssd = 0.0;
-        for (i = 0; i < num_rows; i++) {
-            ssd += (dest[i] - src[i]) * (dest[i] - src[i]);
+        __m256 vssd = _mm256_setzero_ps();
+        for (i = 0; i < num_rows; i += 8) {
+            __m256 vdest = _mm256_loadu_ps(&dest[i]);
+            __m256 vsrc = _mm256_loadu_ps(&src[i]);
+            __m256 dest_src_differenece = _mm256_sub_ps(vdest, vsrc);
+            __m256 dest_src_differenece_squared = _mm256_mul_ps(dest_src_differenece, dest_src_differenece);
+            vssd =  _mm256_add_ps(vssd, dest_src_differenece_squared);
         }
+
+        float ssd_arr[8];
+        _mm256_storeu_ps(ssd_arr, vssd);
+        ssd += ssd_arr[0] + ssd_arr[1] + ssd_arr[2] + ssd_arr[3] +
+               ssd_arr[4] + ssd_arr[5] + ssd_arr[6] + ssd_arr[7];
 
         num_iter++;
         mse = sqrt(ssd); /* Mean squared error. */
