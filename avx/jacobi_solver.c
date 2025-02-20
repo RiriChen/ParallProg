@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/time.h>
 #include <string.h>
 #include <math.h>
 #include "jacobi_solver.h"
@@ -60,38 +61,40 @@ int main(int argc, char **argv)
 #endif
 
     int max_iter = 100000; /* Maximum number of iterations to run */
-    clock_t start, end;
+    struct timeval start;
+    struct timeval end;
     double time_spent;
+
     /* Compute Jacobi solution using reference code */
     fprintf(stderr, "**************\n");
     fprintf(stderr, "Generating solution using reference\n");
-    start = clock();
+    gettimeofday(&start, NULL);
     compute_gold(A, reference_x, B, max_iter);
-    end = clock();
-    time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+    gettimeofday(&end, NULL);
     display_jacobi_solution(A, reference_x, B); /* Display statistics */
+    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
     fprintf(stderr, "Execution time: %f seconds\n", time_spent);
     fprintf(stderr, "**************\n\n");
 
     /* Compute Jacobi solution using AVX. Return solution in avx_solution_x. */
     fprintf(stderr, "**************\n");
     fprintf(stderr, "Generating solution using AVX\n");
-    start = clock();
+    gettimeofday(&start, NULL);
     compute_using_avx(A, avx_solution_x, B, max_iter);
-    end = clock();
-    time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+    gettimeofday(&end, NULL);
     display_jacobi_solution(A, avx_solution_x, B); /* Display statistics */
+    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
     fprintf(stderr, "Execution time: %f seconds\n", time_spent);
     fprintf(stderr, "**************\n\n");
 
     /* Compute Jacobi solution using pthreads. Return solution in pthread_solution_x. */
     fprintf(stderr, "**************\n");
     fprintf(stderr, "Generating solution using pthreads + AVX\n");
-    start = clock();
+    gettimeofday(&start, NULL);
     compute_using_pthread_avx(A, pthread_avx_solution_x, B, max_iter, num_threads);
-    end = clock();
-    time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+    gettimeofday(&end, NULL);
     display_jacobi_solution(A, pthread_avx_solution_x, B); /* Display statistics */
+    time_spent = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
     fprintf(stderr, "Execution time: %f seconds\n", time_spent);
     fprintf(stderr, "**************\n\n");
 
