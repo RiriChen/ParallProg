@@ -1,15 +1,15 @@
 /* Reference code implementing the box blur filter.
 
-    Build and execute as follows: 
-        make clean && make 
-        ./blur_filter size
+   Build and execute as follows:
+   make clean && make
+   ./blur_filter size
 
-    Author: Naga Kandasamy
-    Date modified: February 20, 2025
+Author: Naga Kandasamy
+Date modified: February 20, 2025
 
-    Student name(s): FIXME
-    Date modified: FIXME
-*/
+Student name(s): Ricky Chen, Keith Trungcao
+Date modified: 2/25/25
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,35 +54,35 @@ int main(int argc, char **argv)
     int i;
     for (i = 0; i < size * size; i++)
         in.element[i] = rand()/(float)RAND_MAX -  0.5;
-  
-   /* Calculate the blur on the CPU. The result is stored in out_gold. */
-    fprintf(stderr, "Calculating blur on the CPU\n"); 
-    compute_gold(in, out_gold); 
 
-#ifdef DEBUG 
-   print_image(in);
-   print_image(out_gold);
+    /* Calculate the blur on the CPU. The result is stored in out_gold. */
+    fprintf(stderr, "Calculating blur on the CPU\n");
+    compute_gold(in, out_gold);
+
+#ifdef DEBUG
+    print_image(in);
+    print_image(out_gold);
 #endif
 
-   /* FIXME: Calculate the blur on the GPU. The result is stored in out_gpu. */
-   fprintf(stderr, "Calculating blur on the GPU\n");
-   compute_on_device(in, out_gpu);
+    /* FIXME: Calculate the blur on the GPU. The result is stored in out_gpu. */
+    fprintf(stderr, "Calculating blur on the GPU\n");
+    compute_on_device(in, out_gpu);
 
-   /* Check CPU and GPU results for correctness */
-   fprintf(stderr, "Checking CPU and GPU results\n");
-   int num_elements = out_gold.size * out_gold.size;
-   float eps = 1e-6;    /* Do not change */
-   int check;
-   check = check_results(out_gold.element, out_gpu.element, num_elements, eps);
-   if (check == 0) 
-       fprintf(stderr, "TEST PASSED\n");
-   else
-       fprintf(stderr, "TEST FAILED\n");
-   
-   /* Free data structures on the host */
-   free((void *)in.element);
-   free((void *)out_gold.element);
-   free((void *)out_gpu.element);
+    /* Check CPU and GPU results for correctness */
+    fprintf(stderr, "Checking CPU and GPU results\n");
+    int num_elements = out_gold.size * out_gold.size;
+    float eps = 1e-6;    /* Do not change */
+    int check;
+    check = check_results(out_gold.element, out_gpu.element, num_elements, eps);
+    if (check == 0)
+        fprintf(stderr, "TEST PASSED\n");
+    else
+        fprintf(stderr, "TEST FAILED\n");
+
+    /* Free data structures on the host */
+    free((void *)in.element);
+    free((void *)out_gold.element);
+    free((void *)out_gpu.element);
 
     exit(EXIT_SUCCESS);
 }
@@ -90,17 +90,36 @@ int main(int argc, char **argv)
 /* FIXME: Complete this function to calculate the blur on the GPU */
 void compute_on_device(const image_t in, image_t out)
 {
+    float *in_d, *out_d;
+    size_t size = in.size * in.size * sizeof(float);
+
+    cudaMalloc((void**)&in_d, size);
+    cudaMalloc((void**)&out_d, size);
+
+    cudaMemcpy(in_d, in.element, size, cudaMemcpyHostToDevice);
+
+    dim3 threadsPerBlock(1024, 1);
+    dim3 numBlocks(ceil((float)(in.size * in.size) / threadsPerBlock.x), 1);
+
+    blur_filter_kernel<<<numBlocks, threadsPerBlock>>>(in_d, out_d, in.size);
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(out.element, out_d, size, cudaMemcpyDeviceToHost);
+
+    cudaFree(in_d);
+    cudaFree(out_d);
+
     return;
 }
 
 /* Check correctness of results */
-int check_results(const float *pix1, const float *pix2, int num_elements, float eps) 
+int check_results(const float *pix1, const float *pix2, int num_elements, float eps)
 {
     int i;
     for (i = 0; i < num_elements; i++)
-        if (fabsf((pix1[i] - pix2[i])/pix1[i]) > eps) 
+        if (fabsf((pix1[i] - pix2[i])/pix1[i]) > eps)
             return -1;
-    
+
     return 0;
 }
 
