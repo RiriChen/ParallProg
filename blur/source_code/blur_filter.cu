@@ -55,9 +55,15 @@ int main(int argc, char **argv)
     for (i = 0; i < size * size; i++)
         in.element[i] = rand()/(float)RAND_MAX -  0.5;
 
+    struct timeval start, stop;
+
     /* Calculate the blur on the CPU. The result is stored in out_gold. */
     fprintf(stderr, "Calculating blur on the CPU\n");
+    gettimeofday(&start, NULL);
     compute_gold(in, out_gold);
+    gettimeofday(&stop, NULL);
+    printf("Execution time = %fs\n", (float)(stop.tv_sec - start.tv_sec +\
+                (stop.tv_usec - start.tv_usec)/(float)1000000));
 
 #ifdef DEBUG
     print_image(in);
@@ -66,7 +72,11 @@ int main(int argc, char **argv)
 
     /* FIXME: Calculate the blur on the GPU. The result is stored in out_gpu. */
     fprintf(stderr, "Calculating blur on the GPU\n");
+    gettimeofday(&start, NULL);
     compute_on_device(in, out_gpu);
+    gettimeofday(&stop, NULL);
+    printf("Execution time = %fs\n", (float)(stop.tv_sec - start.tv_sec +\
+                (stop.tv_usec - start.tv_usec)/(float)1000000));
 
     /* Check CPU and GPU results for correctness */
     fprintf(stderr, "Checking CPU and GPU results\n");
