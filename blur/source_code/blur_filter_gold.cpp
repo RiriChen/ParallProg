@@ -1,7 +1,7 @@
 /* Reference code for the box blur filter.
  *
  * Author: Naga Kandasamy
- * Date modified: February 15, 2022 
+ * Date modified: February 15, 2022
  */
 
 #include <stdlib.h>
@@ -28,7 +28,7 @@ void compute_gold(const image_t in, image_t out)
         num_neighbors = 0;
         for (i = -BLUR_SIZE; i < (BLUR_SIZE + 1); i++) {
             for (j = -BLUR_SIZE; j < (BLUR_SIZE + 1); j++) {
-                /* Accumulate values of neighbors while checking for 
+                /* Accumulate values of neighbors while checking for
                  * boundary conditions */
                 curr_row = row + i;
                 curr_col = col + j;
@@ -44,4 +44,3 @@ void compute_gold(const image_t in, image_t out)
         out.element[pix] = blur_value/num_neighbors;
     }
 }
-
