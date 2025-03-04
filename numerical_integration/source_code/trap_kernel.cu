@@ -10,7 +10,7 @@ __device__ float fd(float x)
 }
 
 /* Kernel function */
-__global__ void trap_kernel(float a, float b, float h, int n, double *result)
+__global__ void trap_kernel(float a, float b, int n, float h, double *result)
 {
     __shared__ double partial_sum[THREAD_BLOCK_SIZE];
     int tid = threadIdx.x + blockIdx.x * blockDim.x;

@@ -73,7 +73,7 @@ double compute_on_device(float a, float b, int n, float h)
     int num_blocks = (n + threads_per_block - 1) / threads_per_block;
 
     gettimeofday(&start, NULL);
-    trap_kernel<<<num_blocks, threads_per_block>>>(a, b, h, n, d_result);
+    trap_kernel<<<num_blocks, threads_per_block>>>(a, b, n, h, d_result);
     cudaDeviceSynchronize();
     gettimeofday(&stop, NULL);
 
