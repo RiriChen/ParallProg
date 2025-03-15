@@ -59,7 +59,7 @@ void compute_gold(const matrix_t A, matrix_t x, const matrix_t B)
         }
         num_iter++;
         mse = sqrt (ssd); /* Mean squared error. */
-        printf("Iteration: %d. MSE = %f\n", num_iter, mse);
+        //printf("Iteration: %d. MSE = %f\n", num_iter, mse);
 
         if ((mse <= THRESHOLD) || (num_iter == max_iter))
             done = 1;
@@ -72,20 +72,20 @@ void compute_gold(const matrix_t A, matrix_t x, const matrix_t B)
 /* Display statistics related to the Jacobi solution */
 void display_jacobi_solution(const matrix_t A, const matrix_t x, const matrix_t B)
 {
-	double diff = 0.0;
-	unsigned int num_rows = A.num_rows;
+    double diff = 0.0;
+    unsigned int num_rows = A.num_rows;
     unsigned int num_cols = A.num_columns;
 
     for (unsigned int i = 0; i < num_rows; i++) {
-		double line_sum = 0.0;
-		for (unsigned int j = 0; j < num_cols; j++){
-			line_sum += A.elements[i * num_cols + j] * x.elements[j];
-		}
+        double line_sum = 0.0;
+        for (unsigned int j = 0; j < num_cols; j++){
+            line_sum += A.elements[i * num_cols + j] * x.elements[j];
+        }
 
         diff += fabsf(line_sum - B.elements[i]);
-	}
+    }
 
-	printf("Average diff between LHS and RHS: %f \n", diff/(float)num_rows);
+    printf("Average diff between LHS and RHS: %f \n", diff/(float)num_rows);
     return;
 }
 
