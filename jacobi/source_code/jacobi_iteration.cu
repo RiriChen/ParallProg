@@ -75,7 +75,12 @@ int main(int argc, char **argv)
        in gpu_naive_solution_x and gpu_opt_solution_x. */
     printf("\nPerforming Jacobi iteration on device\n");
     compute_on_device(A, gpu_naive_solution_x, gpu_opt_solution_x, B);
+    printf("Naive jacobi:\n");
+
     display_jacobi_solution(A, gpu_naive_solution_x, B); /* Display statistics */
+
+    printf("optimzied jacobi:\n");
+
     display_jacobi_solution(A, gpu_opt_solution_x, B);
 
     free(A.elements);
@@ -95,6 +100,8 @@ void compute_on_device(const matrix_t A, matrix_t gpu_naive_sol_x,
     matrix_t A_d = allocate_matrix_on_device(A);
     matrix_t B_d = allocate_matrix_on_device(B);
 
+    printf("\nRunning Naive Implementation\n");
+    gettimeofday(&start, NULL);
     matrix_t x_naive_d = allocate_matrix_on_device(gpu_naive_sol_x);
     matrix_t new_x_naive_d = allocate_matrix_on_device(gpu_naive_sol_x);
 
@@ -111,9 +118,6 @@ void compute_on_device(const matrix_t A, matrix_t gpu_naive_sol_x,
     int done_naive = 0;
     double ssd_naive = 0.0;
 
-    printf("\nRunning Naive Implementation\n");
-
-    gettimeofday(&start, NULL);
     while (!done_naive) {
         jacobi_iteration_kernel_naive<<<grid, threads, THREAD_BLOCK_SIZE * sizeof(double)>>>(
             A_d.elements, B_d.elements, x_naive_d.elements, new_x_naive_d.elements, ssd_naive_d, A.num_rows, A.num_columns);
@@ -127,7 +131,10 @@ void compute_on_device(const matrix_t A, matrix_t gpu_naive_sol_x,
         }
         free(ssd_naive_h);
 
-        if (sqrt(ssd_naive) < THRESHOLD) {
+        //printf("ssd_naive: %lf\n", sqrt(ssd_naive));
+        //threshold 1-e5
+        if (sqrt(ssd_naive) <= THRESHOLD) {
+            //printf("done naiive\n");
             done_naive = 1;
         }
 
@@ -135,21 +142,95 @@ void compute_on_device(const matrix_t A, matrix_t gpu_naive_sol_x,
         x_naive_d = new_x_naive_d;
         new_x_naive_d = tmp;
     }
+
     gettimeofday(&stop, NULL);
-    fprintf(stderr, "Execution time = %fs\n", (float)(stop.tv_sec - start.tv_sec +\
+    fprintf(stderr, "Naive execution time = %fs\n", (float)(stop.tv_sec - start.tv_sec +\
                 (stop.tv_usec - start.tv_usec)/(float)1000000));
     check_CUDA_error("Error in kernel");
 
     copy_matrix_from_device(gpu_naive_sol_x, x_naive_d);
 
-    cudaFree(A_d.elements);
+
+    //matrix_t A_d = allocate_matrix_on_device(A);
+    //fprintf(stderr, "\nConverting A to B = A^T to get elements ordered in column-major fashion\n");
+
+    printf("\nRunning coalesced Implementation\n");
+    // printf("This is A_T\n");
+    // print_matrix(A_T);
+    gettimeofday(&start, NULL);
+
+    matrix_t A_T  = allocate_matrix_on_host(A.num_rows, A.num_columns, 0);
+    int i, j;
+    for (i = 0; i < A_T.num_rows; i++) {
+       for (j = 0; j < A_T.num_columns; j++) {
+        A_T.elements[i * A_T.num_columns + j] = A.elements[j * A_T.num_columns + i];
+       }
+    }
+
+    matrix_t A_T_gpu = allocate_matrix_on_device(A_T);
+
+    matrix_t x_opt_d = allocate_matrix_on_device(gpu_opt_sol_x);
+    matrix_t new_x_opt_d = allocate_matrix_on_device(gpu_opt_sol_x);
+
+    double *ssd_opt_d;
+    cudaMalloc((void **)&ssd_opt_d, sizeof(double) * ((A.num_rows + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE));
+
+    copy_matrix_to_device(A_T_gpu, A_T);
+    copy_matrix_to_device(B_d, B);
+    copy_matrix_to_device(x_opt_d, gpu_opt_sol_x);
+
+
+    int done_opt = 0;
+    double ssd_opt = 0.0;
+
+
+    while (!done_opt) {
+
+        jacobi_iteration_kernel_optimized_coalesced<<<grid, threads, THREAD_BLOCK_SIZE * sizeof(double)>>>(
+            A_T_gpu.elements, B_d.elements, x_opt_d.elements, new_x_opt_d.elements, ssd_opt_d, A_T_gpu.num_rows, A_T_gpu.num_columns);
+
+        double *ssd_opt_h = (double *)malloc(grid.x * sizeof(double));
+        cudaMemcpy(ssd_opt_h, ssd_opt_d, grid.x * sizeof(double), cudaMemcpyDeviceToHost);
+
+        ssd_opt = 0.0;
+        for (int i = 0; i < grid.x; i++) {
+            ssd_opt += ssd_opt_h[i];
+        }
+        free(ssd_opt_h);
+
+        if (sqrt(ssd_opt) <= THRESHOLD) {
+            done_opt = 1;
+        }
+
+        matrix_t tmp = x_opt_d;
+        x_opt_d = new_x_opt_d;
+        new_x_opt_d = tmp;
+    }
+
+    gettimeofday(&stop, NULL);
+    fprintf(stderr, "Coalesced execution time = %fs\n", (float)(stop.tv_sec - start.tv_sec +\
+                (stop.tv_usec - start.tv_usec)/(float)1000000));
+
+    check_CUDA_error("Error in kernel");
+
+    // /* Copy result from the device */
+    copy_matrix_from_device(gpu_opt_sol_x, x_opt_d);
+
+    /* Free memory on host */
+    free((void *)A_T.elements);
+    cudaFree(A_T_gpu.elements);
     cudaFree(B_d.elements);
+    cudaFree(x_opt_d.elements);
+    cudaFree(new_x_opt_d.elements);
+    cudaFree(ssd_opt_d);
+    cudaFree(A_d.elements);
+    //cudaFree(B_d.elements);
     cudaFree(x_naive_d.elements);
     cudaFree(new_x_naive_d.elements);
     cudaFree(ssd_naive_d);
-
     return;
 }
+
 
 /* Allocate matrix on the device of same size as M */
 matrix_t allocate_matrix_on_device(const matrix_t M)
